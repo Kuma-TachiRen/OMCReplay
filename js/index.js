@@ -5,12 +5,15 @@ var colorpalette = ['146,186,207', '31,120,180', '178,223,138', '51,160,44', '25
 $(function () {
   $('#load').on('click', Load);
   msgInit();
+  var contest = getParam('contest');
+  var users = getParam('users');
+  if (users) $('#users').val(users);
   $.getJSON(`./contests.json`, function () { })
     .done(function (data) {
       for (var i in data) {
         $('#contest').append(`<option value="${data[i].id}">${data[i].name}</option>`);
         contestdic[data[i].id] = data[i].name;
-        if (i == 0) {
+        if (i == 0 || data[i].id == contest) {
           $('#contest').val(data[i].id);
         }
       }
@@ -123,8 +126,20 @@ function Load() {
     if (users.length > colorpalette.length) { msgErr('Too many users'); return; }
     $.getJSON(`./data/${contest}.json`, function () { })
       .done(function (jdata) {
+        // define variables
+        var highest = {};
+        for (var i in users) {
+          highest[users[i]] = { rank: 0, time: 0 };
+        }
+        var cainfo = {};
+        for (var i in jdata.users) {
+          cainfo[jdata.users[i]] = { id: jdata.users[i], point: 0, time: 0, pena: 0 };
+        }
         // define functions
-        var compareStandings = function (a, b) {
+        var timeSchedule = function (time) {
+          return (time < 600 ? time % 30 : time % 60) == 0;
+        }
+        var compareStand = function (a, b) {
           if (a.point == b.point) return a.time - b.time;
           return b.point - a.point;
         }
@@ -134,19 +149,24 @@ function Load() {
           for (var u in jdata.users) {
             standing.push(cainfo[jdata.users[u]]);
           }
-          standing.sort(compareStandings);
+          standing.sort(compareStand);
           var rank = 1;
           for (var j = 0; j < standing.length; j++) {
-            if (j == 0 || compareStandings(standing[j - 1], standing[j]) < 0) rank = j + 1;
+            if (j == 0 || compareStand(standing[j - 1], standing[j]) < 0) rank = j + 1;
             for (var k in users) {
-              if (users[k] == standing[j].id) {
+              var u = users[k];
+              if (u == standing[j].id) {
                 var title = '';
-                if (newca[users[k]] && newca[users[k]].length > 0) title = `${newca[users[k]].join(',')}`;
+                if (newca[u] && newca[u].length > 0) title = `${newca[u].join(',')}`;
                 data.datasets[k].data.push({ title: title, x: time, y: rank });
+                if (cainfo[u].point > 0 && (highest[u].rank == 0 || highest[u].rank > rank)) {
+                  highest[users[k]] = { rank: rank, time: time, prob: newca[u].join(',') };
+                }
               }
             }
           }
         }
+        // check users and generate dataset
         for (var i in users) {
           if (!jdata.users.includes(users[i])) {
             msgErr(`Unparticipated User: ${users[i]}`);
@@ -154,7 +174,7 @@ function Load() {
           }
           data.datasets.push({
             label: users[i],
-            data: [{ x: 0, y: 0 }],
+            data: [{ x: 0, y: 1 }],
             borderColor: `rgba(${colorpalette[i]},0.8)`,
             backgroundColor: `rgba(${colorpalette[i]},0.7)`,
             tension: 0.3,
@@ -163,14 +183,10 @@ function Load() {
           });
         }
         // simulate standings
-        var cainfo = {};
-        for (var i in jdata.users) {
-          cainfo[jdata.users[i]] = { id: jdata.users[i], point: 0, time: 0, pena: 0 };
-        }
-        var time = 0;
+        var time = 1;
         for (var i in jdata.timeline) {
           for (; time < jdata.timeline[i].time; time++) {
-            if (time % 60 == 0) calcRank(time, {});
+            if (timeSchedule(time)) calcRank(time, {});
           }
           var update = false;
           var newca = {};
@@ -185,16 +201,24 @@ function Load() {
               newca[d.id].push(jdata.name[d.prob]);
             }
           }
-          if (time % 60 == 0 || update) calcRank(time, newca);
+          if (timeSchedule(time) || update) calcRank(time, newca);
           time++;
         }
         for (; time <= jdata.len; time++) {
-          if (time % 60 == 0) calcRank(time, {});
+          if (timeSchedule(time)) calcRank(time, {});
         }
         chart.data.labels = data.labels;
         chart.data.datasets = data.datasets;
-        chart.options.plugins.title.text = contestdic[$('#contest').val()];
+        chart.options.plugins.title.text = contestdic[contest];
         chart.update();
+        var sharetext = [];
+        for (var i in users) {
+          sharetext.push(`${users[i]} : ${rankToStr(highest[users[i]].rank)}(${timeToStr(highest[users[i]].time)},${highest[users[i]].prob})`);
+        }
+        setTweetButton(
+          `${contestdic[contest]} での最高瞬間順位\n${sharetext.join('\n')}`,
+          `${contestdic[contest]},OMCReplay`,
+          `kuma-tachiren.github.io/OMCReplay?contest=${contest}&users=${users.join(',')}`);
         msgOk('Succeeded');
       })
       .fail(function () {
@@ -225,6 +249,16 @@ function msgInit() {
   $('.message input[type=checkbox]').change(function () {
     $(this).parent().parent().hide();
   });
+}
+
+function getParam(name, url) {
+  if (!url) url = window.location.href;
+  name = name.replace(/[\[\]]/g, "\\$&");
+  var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+    results = regex.exec(url);
+  if (!results) return null;
+  if (!results[2]) return '';
+  return decodeURIComponent(results[2].replace(/\+/g, " "));
 }
 
 function timeToStr(time) {
@@ -262,4 +296,17 @@ function createRoundRectPath(ctx, x, y, w, h, r) {
 function fillRoundRect(ctx, x, y, w, h, r) {
   createRoundRectPath(ctx, x, y, w, h, r);
   ctx.fill();
+}
+
+function setTweetButton(text, tags, url) {
+  $('#share').empty();
+  twttr.widgets.createShareButton(
+    url,
+    document.getElementById("share"),
+    {
+      size: 'large',
+      text: `${text}\n`,
+      hashtags: tags
+    }
+  );
 }
