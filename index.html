@@ -1,0 +1,57 @@
+<html lang="ja">
+
+<head>
+  <meta charset="utf-8">
+  <title>OMCReplay</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script type="text/javascript" src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.6.1/chart.min.js"></script>
+  <script type="text/javascript" src="js/index.js"></script>
+</head>
+
+<body>
+  <div id="contents" class="contents">
+    <header>
+      <div class="wrapper">
+        <p class="logo"><a href="#">OMCReplay(β)</a></p>
+        <nav>
+          <ul class="nav-items">
+            <li class="nav-item"><a href="https://onlinemathcontest.com/">OnlineMathContest</a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+    <div class="body-contents">
+      <h3>How to use</h3>
+      <ol>
+        <li>コンテストを選ぶ</li>
+        <li>ユーザーIDを入力(カンマ区切りで複数入力)</li>
+        <li>Loadボタンを押す</li>
+      </ol>
+      <h3>Replay</h3>
+      <div class="setting" description="Contest">
+        <select id="contest" class="form"></select>
+      </div>
+      <div class="setting" description="User ID(s)">
+        <input type="text" id="users" class="form">
+      </div>
+      <div class="center">
+        <input type="button" class="load" id="load" value="Load">
+      </div>
+      <div class="message" id="message">
+        <div>
+          <input type="checkbox" id="msg-close">
+          <label for="msg-close" class="close"></label>
+        </div>
+        <p class="text"></p>
+      </div>
+      <div>
+        <canvas id="chart" style="position: relative; width:auto; height:500px"></canvas>
+      </div>
+      <h3>Contact</h3>
+      <p>Twitter:<a href="https://twitter.com/Kuma_TachiRen">@Kuma_TachiRen</p>
+    </div>
+  </div>
+</body>
+
+</html>
