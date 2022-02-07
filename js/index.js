@@ -1,21 +1,20 @@
-var chart;
-var contestdic = {};
-var colorpalette = ['146,186,207', '31,120,180', '178,223,138', '51,160,44', '251,154,153', '227,26,28', '253,191,111', '255,127,0', '202,178,214', '106,61,154', '255,255,153', '177,89,40'];
+let chart;
+let contestdic = {};
+const colorpalette = ['146,186,207', '31,120,180', '178,223,138', '51,160,44', '251,154,153', '227,26,28', '253,191,111', '255,127,0', '202,178,214', '106,61,154', '255,255,153', '177,89,40'];
 
 $(function () {
   $('#load').on('click', Load);
   msgInit();
-  var contest = getParam('contest');
-  var users = getParam('users');
+  const param = (new URL(document.location)).searchParams;
+  const contest = param.get('contest');
+  const users = param.get('users');
   if (users) $('#users').val(users);
   $.getJSON(`./contests.json`, function () { })
     .done(function (data) {
-      for (var i in data) {
+      for (let i in data) {
         $('#contest').append(`<option value="${data[i].id}">${data[i].name}</option>`);
         contestdic[data[i].id] = data[i].name;
-        if (i == 0 || data[i].id == contest) {
-          $('#contest').val(data[i].id);
-        }
+        if (i == 0 || data[i].id == contest) $('#contest').val(data[i].id);
       }
     })
     .fail(function () {
@@ -92,20 +91,20 @@ $(function () {
     },
     plugins: [{
       afterDraw: function (c) {
-        var ctx = c.ctx;
+        let ctx = c.ctx;
         ctx.font = 'bold 12px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';;
         c.data.datasets.forEach(function (d, s) {
-          var meta = c.getDatasetMeta(s);
+          let meta = c.getDatasetMeta(s);
           if (!meta.hidden) {
             meta.data.forEach(function (e, i) {
               if (!d.data[i].title) return;
-              var text = `${d.data[i].title}:${rankToStr(d.data[i].y)}`;
-              var x = e.x;
-              var y = e.y - 15;
-              var w = ctx.measureText(text).width + 10;
-              var h = 22;
+              let text = `${d.data[i].title}:${rankToStr(d.data[i].y)}`;
+              let x = e.x;
+              let y = e.y - 15;
+              let w = ctx.measureText(text).width + 10;
+              let h = 22;
               ctx.fillStyle = d.backgroundColor;
               fillRoundRect(ctx, x - w / 2, y - h / 2, w, h, 5);
               ctx.fillStyle = 'rgba(255,255,255,1)';
@@ -120,43 +119,43 @@ $(function () {
 
 function Load() {
   if (/^\w+(,\w+)*$/.test($('#users').val())) {
-    var data = { labels: ['0:00'], datasets: [] };
-    var contest = $('#contest').val();
-    var users = $('#users').val().split(',');
+    let data = { labels: ['0:00'], datasets: [] };
+    let contest = $('#contest').val();
+    let users = $('#users').val().split(',');
     if (users.length > colorpalette.length) { msgErr('Too many users'); return; }
     $.getJSON(`./data/${contest}.json`, function () { })
       .done(function (jdata) {
-        // define variables
-        var highest = {};
-        for (var i in users) {
+        // define letiables
+        let highest = {};
+        for (let i in users) {
           highest[users[i]] = { rank: 0, time: 0 };
         }
-        var cainfo = {};
-        for (var i in jdata.users) {
+        let cainfo = {};
+        for (let i in jdata.users) {
           cainfo[jdata.users[i]] = { id: jdata.users[i], point: 0, time: 0, pena: 0 };
         }
         // define functions
-        var timeSchedule = function (time) {
+        let timeSchedule = function (time) {
           return (time < 600 ? time % 30 : time % 60) == 0;
         }
-        var compareStand = function (a, b) {
+        let compareStand = function (a, b) {
           if (a.point == b.point) return a.time - b.time;
           return b.point - a.point;
         }
-        var calcRank = function (time, newca) {
+        let calcRank = function (time, newca) {
           data.labels.push(timeToStr(time));
-          var standing = [];
-          for (var u in jdata.users) {
+          let standing = [];
+          for (let u in jdata.users) {
             standing.push(cainfo[jdata.users[u]]);
           }
           standing.sort(compareStand);
-          var rank = 1;
-          for (var j = 0; j < standing.length; j++) {
+          let rank = 1;
+          for (let j = 0; j < standing.length; j++) {
             if (j == 0 || compareStand(standing[j - 1], standing[j]) < 0) rank = j + 1;
-            for (var k in users) {
-              var u = users[k];
+            for (let k in users) {
+              let u = users[k];
               if (u == standing[j].id) {
-                var title = '';
+                let title = '';
                 if (newca[u] && newca[u].length > 0) title = `${newca[u].join(',')}`;
                 data.datasets[k].data.push({ title: title, x: time, y: rank });
                 if (cainfo[u].point > 0 && (highest[u].rank == 0 || highest[u].rank > rank)) {
@@ -167,7 +166,7 @@ function Load() {
           }
         }
         // check users and generate dataset
-        for (var i in users) {
+        for (let i in users) {
           if (!jdata.users.includes(users[i])) {
             msgErr(`Unparticipated User: ${users[i]}`);
             return;
@@ -183,16 +182,16 @@ function Load() {
           });
         }
         // simulate standings
-        var time = 1;
-        for (var i in jdata.timeline) {
+        let time = 1;
+        for (let i in jdata.timeline) {
           for (; time < jdata.timeline[i].time; time++) {
             if (timeSchedule(time)) calcRank(time, {});
           }
-          var update = false;
-          var newca = {};
-          for (var u in users) newca[users[u]] = [];
-          for (var j in jdata.timeline[i].data) {
-            var d = jdata.timeline[i].data[j];
+          let update = false;
+          let newca = {};
+          for (let u in users) newca[users[u]] = [];
+          for (let j in jdata.timeline[i].data) {
+            let d = jdata.timeline[i].data[j];
             cainfo[d.id].point += d.point;
             cainfo[d.id].pena += d.pena;
             cainfo[d.id].time = time + cainfo[d.id].pena * jdata.pena;
@@ -211,8 +210,8 @@ function Load() {
         chart.data.datasets = data.datasets;
         chart.options.plugins.title.text = contestdic[contest];
         chart.update();
-        var sharetext = [];
-        for (var i in users) {
+        let sharetext = [];
+        for (let i in users) {
           sharetext.push(`${users[i]} : ${rankToStr(highest[users[i]].rank)}(${timeToStr(highest[users[i]].time)},${highest[users[i]].prob})`);
         }
         setTweetButton(
@@ -249,16 +248,6 @@ function msgInit() {
   $('.message input[type=checkbox]').change(function () {
     $(this).parent().parent().hide();
   });
-}
-
-function getParam(name, url) {
-  if (!url) url = window.location.href;
-  name = name.replace(/[\[\]]/g, "\\$&");
-  var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
-    results = regex.exec(url);
-  if (!results) return null;
-  if (!results[2]) return '';
-  return decodeURIComponent(results[2].replace(/\+/g, " "));
 }
 
 function timeToStr(time) {
